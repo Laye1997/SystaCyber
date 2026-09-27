@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Vous auriez pu être piégé · {{ seance.organisation }}{% endblock %}
+{% block body_class %}phone{% endblock %}
+{% block body %}
+<div class="wrap">
+  {% include "includes/logo.html" with tag="CyberSécurité" blanc=1 %}
+  <div class="lecon-alerte">
+    <span class="lecon-ico" aria-hidden="true">!</span>
+    <div>
+      <h1 class="page-title">Oups, c'était un piège</h1>
+      <p class="help">{% if vote.a_clique %}Vous avez ouvert le lien.{% else %}Vous l'avez classé comme légitime.{% endif %} Pas de panique : c'est un exercice, et c'est ici qu'on apprend.</p>
+    </div>
+  </div>
+
+  <article class="mail lecon-mail">
+    <header><span>{{ nom }}</span><span class="suspect">{{ adresse }}</span></header>
+    <h2>{{ objet }}</h2>
+    {% if url %}<p class="mail-link suspect">{{ url }}</p>{% endif %}
+  </article>
+
+  {% if indices %}
+  <h2 class="lecon-h">Les signaux à repérer</h2>
+  <ol class="lecon-indices">{% for i in indices %}<li>{{ i }}</li>{% endfor %}</ol>
+  {% endif %}
+
+  <div class="card lecon-texte">{{ lecon|safe }}</div>
+
+  <div class="lecon-reflexe">
+    <strong>Le réflexe</strong>
+    <span>Ne jamais donner un mot de passe, un code ou un RIB depuis un lien reçu. En cas de doute, vérifier par un autre canal.</span>
+  </div>
+
+  <form method="post">
+    {% csrf_token %}
+    <button class="btn block" type="submit">J'ai compris, je continue</button>
+  </form>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="{% static 'systalink/live.js' %}"></script>
+<script>demarrerBattement("{% url 'participant_etat_json' seance.code %}");</script>
+{% endblock %}

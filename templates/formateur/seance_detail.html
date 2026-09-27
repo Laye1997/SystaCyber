@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ seance }}{% endblock %}
+{% block body %}
+<header class="topbar">
+  {% include "includes/logo.html" with tag="CyberSécurité" %}
+  <nav>
+    {% include "includes/compteur.html" %}
+    <a href="{% url 'tableau_de_bord' %}">Séances</a>
+    <a href="{% url 'presenter' seance.pk %}">Présenter</a>
+    <a href="{% url 'resultats' seance.pk %}">Résultats</a>
+  </nav>
+</header>
+<div class="wrap">
+  {% if messages %}<ul class="messages">{% for m in messages %}<li>{{ m }}</li>{% endfor %}</ul>{% endif %}
+  <div class="section-head">
+    <div>
+      <p class="help" style="margin:0">{{ seance.date }} · {{ seance.formateur }}{% if seance.lieu %} · {{ seance.lieu }}{% endif %}</p>
+      <h1 class="page-title">{{ seance.organisation }}{% if seance.groupe %} · {{ seance.groupe }}{% endif %}</h1>
+    </div>
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+      <a class="btn ghost" href="{% url 'seance_rapport_pdf' seance.pk %}">Rapport client (PDF)</a>
+      <a class="btn ghost" href="{% url 'seance_attestations_pdf' seance.pk %}">Attestations (PDF)</a>
+      <a class="btn" href="{% url 'presenter' seance.pk %}">Lancer la présentation</a>
+    </div>
+  </div>
+
+  <div class="grid grid-3">
+    <div class="card">
+      <h2 class="page-title">Code salle</h2>
+      <p class="code-giant">{{ seance.code }}</p>
+      <p class="help" style="margin:0">{{ url_rejoindre }}</p>
+      <div class="kpi-inline">
+        <span class="n" data-live-n>{{ etat.participants_connectes }}</span>
+        <span class="help">connecté{{ etat.participants_connectes|pluralize }} maintenant · {{ seance.participants_prevus }} prévu{{ seance.participants_prevus|pluralize }}</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 class="page-title">Activités salle</h2>
+      <div class="toggles">
+        {% for action, libelle, ouvert in activites %}
+        <form method="post" action="{% url 'seance_action' seance.pk %}">{% csrf_token %}
+          <input type="hidden" name="action" value="{{ action }}">
+          <button type="submit" class="toggle {% if ouvert %}on{% endif %}">
+            <span class="dot"></span>{{ libelle }}<em>{% if ouvert %}ouvert{% else %}fermé{% endif %}</em>
+          </button>
+        </form>
+        {% endfor %}
+      </div>
+      <p class="help" style="margin-top:.8rem">Quiz d'entrée {{ etat.entree.n }} · Simulation {{ etat.phish.n }} · Sortie {{ etat.sortie.n }} · Évaluations {{ etat.evaluations }}</p>
+    </div>
+
+    <div class="card">
+      <h2 class="page-title">Quiz en direct</h2>
+      {% if seance.live_quiz_ouvert %}
+        <p style="margin:0 0 .3rem"><strong>Question {{ etat.live.index|add:1 }} / {{ etat.live.total }}</strong></p>
+        <p class="help" style="margin:0 0 .8rem">{{ etat.live.question.texte|truncatechars:90 }}<br>{{ etat.live.total_votes }} réponse(s){% if etat.live.revele %} · réponse révélée{% endif %}</p>
+        <div style="display:flex;gap:.4rem;flex-wrap:wrap">
+          {% for action, libelle in live_actions %}
+          <form method="post" action="{% url 'seance_action' seance.pk %}">{% csrf_token %}
+            <input type="hidden" name="action" value="{{ action }}">
+            <button type="submit" class="ghost">{{ libelle }}</button>
+          </form>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="help">Une question à la fois : chacun vote sur son téléphone, le graphique s'affiche au projecteur à la révélation.</p>
+        <form method="post" action="{% url 'seance_action' seance.pk %}">{% csrf_token %}
+          <input type="hidden" name="action" value="live_quiz"><input type="hidden" name="next" value="presenter">
+          <button type="submit">Lancer le quiz live</button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:1rem">
+    <div class="section-head">
+      <h2 class="page-title" style="margin:0">Suivi des participants</h2>
+      <span class="help">Noms facultatifs, saisis à l'entrée. Les réponses restent anonymes dans le rapport.</span>
+    </div>
+    {% if suivi %}
+    <table class="table flat">
+      <thead><tr><th>Participant</th><th>Service</th><th>En ligne</th><th>Quiz entrée</th><th>Simulation</th><th>Quiz sortie</th></tr></thead>
+      <tbody>
+      {% for p in suivi %}
+        <tr>
+          <td>{{ p.nom }}</td>
+          <td>{{ p.service|default:"—" }}</td>
+          <td>{% if p.connecte %}<span class="tag ok">en ligne</span>{% else %}<span class="tag">absent</span>{% endif %}</td>
+          <td>{% if p.entree %}<span class="tag ok">fait</span>{% else %}<span class="tag">—</span>{% endif %}</td>
+          <td>{% if p.atelier %}<span class="tag ok">fait</span>{% else %}<span class="tag">—</span>{% endif %}</td>
+          <td>{% if p.sortie %}<span class="tag ok">fait</span>{% else %}<span class="tag">—</span>{% endif %}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <p class="help">Personne n'a encore rejoint la séance.</p>
+    {% endif %}
+  </div>
+
+  <div class="grid grid-2" style="margin-top:1rem">
+    <div class="card">
+      <h2 class="page-title">Emails de la simulation</h2>
+      <ol class="help" style="margin:0;padding-left:1.1rem">
+        {% for e in emails %}<li>{{ e.objet }} {% if e.piege %}<span class="tag bad">piège</span>{% else %}<span class="tag ok">légitime</span>{% endif %}</li>{% endfor %}
+      </ol>
+      <p style="margin-top:.8rem"><a href="{% url 'seance_modifier' seance.pk %}">Choisir d'autres modèles</a> · <a href="{% url 'pack_contenu' %}">Bibliothèque</a></p>
+    </div>
+    <form method="post" class="card">
+      {% csrf_token %}
+      <h2 class="page-title">Notes de séance</h2>
+      {{ notes_form.as_p }}
+      <button type="submit" style="margin-top:.8rem">Enregistrer</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="{% static 'systalink/live.js' %}"></script>
+<script>demarrerCompteurFormateur("{% url 'seance_etat_json' seance.pk %}");</script>
+{% endblock %}

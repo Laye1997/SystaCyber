@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Pack pédagogique{% endblock %}
+{% block body %}
+<header class="topbar">
+  {% include "includes/logo.html" with tag="CyberSécurité" %}
+  <nav>
+    <a href="{% url 'tableau_de_bord' %}">Séances</a>
+  </nav>
+</header>
+<div class="wrap">
+  {% if messages %}<ul class="messages">{% for m in messages %}<li>{{ m }}</li>{% endfor %}</ul>{% endif %}
+  <h1 class="page-title">Pack pédagogique</h1>
+  <p class="help">Ce contenu est commun à toutes les séances. Les jetons {entreprise}, {domaine}, {contact_it}, {signalement} sont remplacés à l'affichage.</p>
+
+  <section class="card" style="margin-top:1.2rem">
+    <div class="section-head">
+      <h2 class="page-title" style="font-size:1.15rem;margin:0">Questions du quiz</h2>
+      <a class="btn" href="{% url 'question_creer' %}">Nouvelle question</a>
+    </div>
+    <table class="table">
+      <thead><tr><th>#</th><th>Question</th><th>Choix</th><th>Active</th><th></th></tr></thead>
+      <tbody>
+      {% for q in questions %}
+        <tr>
+          <td>{{ q.ordre }}</td>
+          <td>{{ q.texte|truncatechars:90 }}</td>
+          <td class="help">{% for c in q.choix.all %}{{ c.lettre }}{% if c.correct %}✓{% endif %}{% if not forloop.last %}, {% endif %}{% endfor %}</td>
+          <td>{% if q.actif %}oui{% else %}non{% endif %}</td>
+          <td>
+            <a href="{% url 'question_editer' q.pk %}">Modifier</a>
+            <form method="post" action="{% url 'question_supprimer' q.pk %}" class="inline-form" onsubmit="return confirm('Supprimer cette question ?');">
+              {% csrf_token %}<button type="submit" class="ghost danger-text">Supprimer</button>
+            </form>
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5">Aucune question. Chargez le pack ou créez-en une.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section class="card" style="margin-top:1.2rem">
+    <div class="section-head">
+      <h2 class="page-title" style="font-size:1.15rem;margin:0">Emails de simulation</h2>
+      <a class="btn" href="{% url 'email_creer' %}">Nouvel email</a>
+    </div>
+    <table class="table">
+      <thead><tr><th>#</th><th>Objet</th><th>Piégé</th><th></th></tr></thead>
+      <tbody>
+      {% for e in emails %}
+        <tr>
+          <td>{{ e.ordre }}</td>
+          <td>{{ e.objet }}</td>
+          <td>{% if e.piege %}oui{% else %}non{% endif %}</td>
+          <td>
+            <a href="{% url 'email_editer' e.pk %}">Modifier</a>
+            <form method="post" action="{% url 'email_supprimer' e.pk %}" class="inline-form" onsubmit="return confirm('Supprimer cet email ?');">
+              {% csrf_token %}<button type="submit" class="ghost danger-text">Supprimer</button>
+            </form>
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="4">Aucun email d'exercice.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section class="card" style="margin-top:1.2rem">
+    <h2 class="page-title" style="font-size:1.15rem">Slides</h2>
+    <table class="table">
+      <thead><tr><th>Module</th><th>Titre</th><th>Type</th><th></th></tr></thead>
+      <tbody>
+      {% for s in slides %}
+        <tr>
+          <td>{{ s.module }}</td>
+          <td>{{ s.titre|truncatechars:70 }}</td>
+          <td>{{ s.get_type_display }}</td>
+          <td><a href="{% url 'slide_editer' s.pk %}">Modifier</a></td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="4">Aucune slide. Exécutez python manage.py charger_pack</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Quiz · {{ seance.organisation }}{% endblock %}
+{% block body_class %}phone{% endblock %}
+{% block body %}
+<div class="wrap">
+  {% include "includes/logo.html" with tag="CyberSécurité" blanc=1 %}
+  <h1 class="page-title" style="font-size:1.4rem">{% if moment == "entree" %}Quiz d'entrée{% else %}Quiz de sortie{% endif %}</h1>
+  {% if existant %}
+    <div class="kpi" style="margin:1rem 0">
+      <div class="n">{{ existant.score }} / {{ existant.total }}</div>
+      <span>Votre score{% if moment == "entree" %} — les réponses se voient ce soir{% endif %}</span>
+    </div>
+    {% if corriger %}
+      {% for q in questions %}
+      <div class="q">
+        <p><strong>{{ q.ordre }}. {{ q.texte }}</strong></p>
+        {% for c in q.choix.all %}
+          <p class="{% if c.correct %}ok{% elif reponses|default_if_none:'' %}{% endif %}">{{ c.lettre }}. {{ c.texte }}{% if c.correct %} ✓{% endif %}</p>
+        {% endfor %}
+        <p class="help">{{ q.explication }}</p>
+      </div>
+      {% endfor %}
+    {% endif %}
+    <p><a href="{% url 'participant_salle' seance.code %}">Retour à la salle</a></p>
+  {% else %}
+    <form method="post">
+      {% csrf_token %}
+      {% for q in questions %}
+      <div class="q">
+        <p><strong>{{ forloop.counter }}. {{ q.texte }}</strong></p>
+        {% for c in q.choix.all %}
+          <label class="opt"><input type="radio" name="q{{ q.id }}" value="{{ c.id }}" required> {{ c.lettre }}. {{ c.texte }}</label>
+        {% endfor %}
+      </div>
+      {% endfor %}
+      <button class="block" type="submit">Envoyer</button>
+    </form>
+  {% endif %}
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="{% static 'systalink/live.js' %}"></script>
+<script>demarrerBattement("{% url 'participant_etat_json' seance.code %}");</script>
+{% endblock %}

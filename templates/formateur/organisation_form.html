@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Nouvelle organisation{% endblock %}
+{% block body %}
+<header class="topbar">
+  {% include "includes/logo.html" with tag="CyberSécurité" %}
+  <nav><a href="{% url 'tableau_de_bord' %}">Retour</a></nav>
+</header>
+<div class="wrap" style="max-width:640px">
+  <h1 class="page-title">Organisation cliente</h1>
+  <form method="post" class="card">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" style="margin-top:1rem">Enregistrer</button>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,5 @@
+{% load static %}
+<span class="logo">
+  <img src="{% if blanc %}{% static 'systalink/logo-systalink-blanc.png' %}?v=2{% else %}{% static 'systalink/logo-systalink.png' %}{% endif %}" alt="Systalink">
+  {% if tag %}<span class="logo-tag">{{ tag }}</span>{% endif %}
+</span>

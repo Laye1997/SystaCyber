@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}{% if question %}Modifier la question{% else %}Nouvelle question{% endif %}{% endblock %}
+{% block body %}
+<header class="topbar">
+  {% include "includes/logo.html" with tag="CyberSécurité" %}
+  <nav><a href="{% url 'pack_contenu' %}">Pack</a></nav>
+</header>
+<div class="wrap" style="max-width:760px">
+  <h1 class="page-title">{% if question %}Modifier la question{% else %}Nouvelle question{% endif %}</h1>
+  <form method="post" class="card">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <h2 class="page-title" style="font-size:1.1rem;margin-top:1.2rem">Choix de réponse</h2>
+    <p class="help">Au moins deux choix. Cochez la (ou les) bonne(s) réponse(s).</p>
+    {{ formset.management_form }}
+    <div class="choix-grid">
+      <span class="help">Lettre</span>
+      <span class="help">Texte</span>
+      <span class="help">Correct</span>
+      <span class="help">Suppr.</span>
+      {% for f in formset %}
+        {{ f.id }}
+        {{ f.lettre }}
+        {{ f.texte }}
+        <label class="chk">{{ f.correct }}</label>
+        <label class="chk">{% if f.DELETE %}{{ f.DELETE }}{% endif %}</label>
+        {% if f.non_field_errors %}<p class="help" style="grid-column:1/-1;color:var(--danger)">{{ f.non_field_errors }}</p>{% endif %}
+      {% endfor %}
+    </div>
+    <button type="submit" style="margin-top:1.2rem">Enregistrer la question</button>
+  </form>
+</div>
+{% endblock %}

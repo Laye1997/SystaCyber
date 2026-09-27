@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Simulation · {{ seance.organisation }}{% endblock %}
+{% block body_class %}phone{% endblock %}
+{% block body %}
+<div class="wrap">
+  {% include "includes/logo.html" with tag="CyberSécurité" blanc=1 %}
+  <h1 class="page-title" style="font-size:1.35rem">Boîte de simulation</h1>
+  <p class="help">Comme une campagne KnowBe4 : signalez les pièges, validez les emails légitimes. Un piège classé « légitime » ou un lien cliqué compte comme un clic.</p>
+  {% if messages %}<ul class="messages">{% for m in messages %}<li>{{ m }}</li>{% endfor %}</ul>{% endif %}
+  {% if termine %}
+    <div class="kpi">
+      <div class="n {% if echecs %}bad{% else %}ok{% endif %}">{{ echecs }} / {{ n_piege }}</div>
+      <span>Pièges manqués ou liens cliqués (votre taux d'exposition individuel)</span>
+    </div>
+    <p><a href="{% url 'participant_salle' seance.code %}">Retour à la salle</a></p>
+  {% endif %}
+  <form method="post" class="inbox">
+    {% csrf_token %}
+    {% for e in emails %}
+    <article class="mail">
+      <header>
+        <span>{{ e.nom }}</span>
+        <span>{{ e.adresse }}</span>
+      </header>
+      <h2>{{ e.objet }}</h2>
+      <div class="body">{{ e.corps }}</div>
+      {% if e.url %}
+        <a class="mail-link" href="{% url 'participant_clic' seance.code e.obj.id %}" title="{{ e.url }}">{{ e.url }}</a>
+      {% endif %}
+      <div class="choices">
+        <label><input type="radio" name="email_{{ e.obj.id }}" value="1" {% if e.vote.pense_piege %}checked{% endif %} required> Signaler (piégé)</label>
+        <label><input type="radio" name="email_{{ e.obj.id }}" value="0" {% if e.vote and not e.vote.pense_piege %}checked{% endif %}> Légitime</label>
+      </div>
+    </article>
+    {% endfor %}
+    <button class="block" type="submit">Enregistrer mes signalements</button>
+  </form>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="{% static 'systalink/live.js' %}"></script>
+<script>demarrerBattement("{% url 'participant_etat_json' seance.code %}");</script>
+{% endblock %}

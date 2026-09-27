@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Tableau de bord{% endblock %}
+{% block body %}
+<header class="topbar">
+  {% include "includes/logo.html" with tag="CyberSécurité" %}
+  <nav>
+    <a href="{% url 'pack_contenu' %}">Questions et contenu</a>
+    <a href="{% url 'organisation_creer' %}">Nouvelle organisation</a>
+    <a href="{% url 'seance_creer' %}">Nouvelle séance</a>
+    <form action="{% url 'logout' %}" method="post">{% csrf_token %}<button class="ghost" type="submit">Quitter</button></form>
+  </nav>
+</header>
+<div class="wrap">
+  {% if messages %}<ul class="messages">{% for m in messages %}<li>{{ m }}</li>{% endfor %}</ul>{% endif %}
+  <h1 class="page-title">Séances</h1>
+  <p class="help">Un pack unique, un client par séance, baseline → simulation → mesure.</p>
+  <table class="table">
+    <thead><tr><th>Date</th><th>Organisation</th><th>Groupe</th><th>Code</th><th></th></tr></thead>
+    <tbody>
+    {% for s in seances %}
+      <tr>
+        <td>{{ s.date }}</td>
+        <td>{{ s.organisation }}</td>
+        <td>{{ s.groupe }}</td>
+        <td><strong>{{ s.code }}</strong></td>
+        <td>
+          <a href="{{ s.get_absolute_url }}">Ouvrir</a>
+          · <a href="{% url 'seance_modifier' s.pk %}">Modifier</a>
+        </td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="5">Aucune séance. Créez une organisation, puis une séance.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

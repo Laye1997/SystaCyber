@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Séance · {{ seance.organisation }}{% endblock %}
+{% block body_class %}phone{% endblock %}
+{% block body %}
+<div class="wrap">
+  {% include "includes/logo.html" with tag="CyberSécurité" blanc=1 %}
+  <p class="help">{{ seance.organisation }} · {{ seance.date }}</p>
+  {% if messages %}<ul class="messages">{% for m in messages %}<li>{{ m }}</li>{% endfor %}</ul>{% endif %}
+  {% csrf_token %}
+  <div class="live-phone" id="live" hidden></div>
+  <div id="attente">
+    <div class="wait">
+      <div class="radar"></div>
+      <h1 class="page-title">Vous êtes dans la salle</h1>
+      <p>Le formateur ouvre le quiz, la simulation ou l'évaluation. Cette page se met à jour seule.</p>
+    </div>
+    <div id="actions"></div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="{% static 'systalink/live.js' %}"></script>
+<script>
+const code = "{{ seance.code }}";
+const urlVote = "{% url 'participant_live_vote' seance.code %}";
+const liveBox = document.getElementById("live");
+const attente = document.getElementById("attente");
+async function tick() {
+  let d;
+  try {
+    const r = await fetch(`/s/${code}/etat.json`, { credentials: "same-origin" });
+    d = await r.json();
+  } catch (e) { return; }
+  const enLive = rendreQuizLiveParticipant(liveBox, d, urlVote);
+  liveBox.hidden = !enLive;
+  attente.hidden = enLive;
+  if (enLive) return;
+  liveBox.dataset.cle = "";
+  let html = "";
+  if (d.quiz_entree_ouvert && !d.deja_entree) html += `<a class="btn block" href="/s/${code}/quiz/entree/">Quiz d'entrée</a>`;
+  if (d.atelier_ouvert) html += `<a class="btn block warn" href="/s/${code}/atelier/">Simulation d'emails</a>`;
+  if (d.quiz_sortie_ouvert && !d.deja_sortie) html += `<a class="btn block" href="/s/${code}/quiz/sortie/">Quiz de sortie</a>`;
+  if (d.evaluation_ouverte && !d.deja_eval) html += `<a class="btn block" href="/s/${code}/evaluation/">Évaluation</a>`;
+  if (!html) html = `<p class="help">En attente de la prochaine activité…</p>`;
+  document.getElementById("actions").innerHTML = html;
+}
+tick();
+setInterval(tick, 2000);
+</script>
+{% endblock %}

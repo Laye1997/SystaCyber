@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Connexion · Systalink CyberSécurité{% endblock %}
+{% block body %}
+<div class="login-split">
+  <aside class="login-hero">
+    <p style="letter-spacing:.2em;text-transform:uppercase;font-size:.75rem;font-weight:600">www.systalink.com</p>
+    <div>
+      <h1>Infrastructure &amp; Cybersécurité</h1>
+      <div class="rule"></div>
+      <p>Les fondations de la transformation digitale — performance, disponibilité et protection des services numériques.</p>
+    </div>
+    <p>Votre moteur d'innovation numérique</p>
+  </aside>
+  <div class="login-panel">
+    <div style="width:100%;max-width:420px;margin:0 auto">
+      {% include "includes/logo.html" with tag="CyberSécurité" %}
+      <div class="card" style="margin-top:1.5rem">
+        <h1 class="page-title" style="font-size:1.35rem">Espace formateur</h1>
+        <form method="post">
+          {% csrf_token %}
+          {{ form.as_p }}
+          <button type="submit" class="btn block" style="margin-top:1rem">Entrer</button>
+        </form>
+        <p class="help" style="margin-top:1rem"><a href="{% url 'joindre' %}">Je suis participant · rejoindre une séance</a></p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

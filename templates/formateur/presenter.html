@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Présentation · {{ seance.organisation }}{% endblock %}
+{% block body_class %}presenter{% endblock %}
+{% block body %}
+<main class="deck" id="deck">
+  <header class="stage-top">
+    {% include "includes/logo.html" with blanc=1 %}
+    <div class="stage-marks" aria-hidden="true"></div>
+  </header>
+  {% if seance.live_quiz_ouvert %}
+  <section class="stage live-stage" id="live" data-etat="{% url 'seance_etat_json' seance.pk %}">
+    <div class="stage-body">
+      <p class="surtitre">Quiz en direct · <span data-live-pos></span></p>
+      <h1 data-live-q>…</h1>
+      <div class="live-choices" data-live-choices></div>
+      <p class="live-expl" data-live-expl hidden></p>
+      <div class="live-foot">
+        <span class="live-count"><strong data-live-total>0</strong> réponse(s)</span>
+        <span class="live-join">{{ request.get_host }}{% url 'joindre' %} · code <strong>{{ seance.code }}</strong></span>
+      </div>
+    </div>
+  </section>
+  {% else %}
+  <section class="stage {{ slide.type }}">
+    {% if slide.type == "titre" or slide.type == "section" %}<div class="visual" aria-hidden="true"></div>{% endif %}
+    <div class="stage-body">
+      {% if surtitre %}<p class="surtitre">{{ surtitre }}</p>{% endif %}
+      <h1>{{ titre }}</h1>
+      <div class="corps">{{ corps|safe }}</div>
+      {% if slide.video_fichier %}
+        <div class="video"><video src="{{ slide.video_fichier.url }}" controls preload="auto" playsinline></video></div>
+      {% elif slide.video_youtube %}
+        <div class="video"><iframe src="https://www.youtube-nocookie.com/embed/{{ slide.video_youtube|urlencode }}?rel=0&modestbranding=1" title="Vidéo" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
+        <p class="video-alt"><a href="https://www.youtube.com/watch?v={{ slide.video_youtube|urlencode }}" target="_blank" rel="noopener">La vidéo ne s'affiche pas ? Ouvrir sur YouTube ↗</a></p>
+      {% endif %}
+      {% if slide.type == "atelier" and emails %}
+        <ol class="big">{% for e in emails %}<li>{{ e.objet }}</li>{% endfor %}</ol>
+      {% endif %}
+      {% if slide.type == "scenario" and etapes %}
+        <table class="prog">{% for e in etapes %}<tr><th>{{ e.heure }}</th><td>{{ e.evenement }}</td></tr>{% endfor %}</table>
+      {% endif %}
+      {% if "Que faites-vous" in slide.titre and cas %}
+        <table class="prog">{% for c in cas %}<tr><th>{{ c.lettre }}</th><td>{{ c.metier }} — {{ c.situation }}</td></tr>{% endfor %}</table>
+      {% endif %}
+      {% if slide.type == "quiz" or slide.type == "atelier" or index == 0 %}
+        <div class="join-card">
+          <div>
+            <div class="lbl">Rejoindre sur votre téléphone</div>
+            <div class="url">{{ request.get_host }}{% url 'joindre' %}</div>
+          </div>
+          <div>
+            <div class="lbl">Code</div>
+            <div class="code">{{ seance.code }}</div>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  </section>
+  {% endif %}
+  <footer class="deck-foot">
+    <span>{{ seance.organisation }} · Programme de sensibilisation</span>
+    <span>{{ index|add:1 }} / {{ total }}</span>
+  </footer>
+  <div class="deck-progress" style="width:{% widthratio index|add:1 total 100 %}%"></div>
+</main>
+
+<div class="dock">
+  <span class="live">{{ index|add:1 }}/{{ total }} · {{ seance.code }}</span>
+  {% include "includes/compteur.html" %}
+  {% if seance.live_quiz_ouvert %}
+  <p class="notes">Quiz en direct : laissez voter, puis « Révéler » pour afficher la réponse et le graphique.</p>
+  <button class="ghost nav" type="button" data-live-action="live_prev" title="Question précédente (←)">←</button>
+  <button class="ghost nav" type="button" data-live-action="live_next" title="Question suivante (→)">→</button>
+  <button class="warn" type="button" data-live-action="live_reveal" data-live-reveal>Révéler</button>
+  <form method="post" action="{% url 'seance_action' seance.pk %}">{% csrf_token %}
+    <input type="hidden" name="action" value="live_quiz"><input type="hidden" name="next" value="presenter">
+    <button class="ghost" type="submit">Terminer le quiz live</button>
+  </form>
+  {% else %}
+  <p class="notes" title="{{ notes }}">{{ notes }}</p>
+  <form method="post" action="{% url 'seance_action' seance.pk %}">{% csrf_token %}
+    <input type="hidden" name="action" value="prev"><input type="hidden" name="next" value="presenter">
+    <button class="ghost nav" type="submit" title="Précédente (←)">←</button>
+  </form>
+  <form method="post" action="{% url 'seance_action' seance.pk %}">{% csrf_token %}
+    <input type="hidden" name="action" value="next"><input type="hidden" name="next" value="presenter">
+    <button class="ghost nav" type="submit" title="Suivante (→)">→</button>
+  </form>
+  {% if slide.quiz_moment == "entree" %}
+  <form method="post" action="{% url 'seance_action' seance.pk %}">{% csrf_token %}
+    <input type="hidden" name="action" value="quiz_entree"><input type="hidden" name="next" value="presenter">
+    <button class="{% if seance.quiz_entree_ouvert %}ok{% else %}warn{% endif %}" type="submit">{% if seance.quiz_entree_ouvert %}Fermer le quiz{% else %}Ouvrir le quiz d'entrée{% endif %}</button>
+  </form>
+  {% endif %}
+  {% if slide.quiz_moment == "sortie" %}
+  <form method="post" action="{% url 'seance_action' seance.pk %}">{% csrf_token %}
+    <input type="hidden" name="action" value="quiz_sortie"><input type="hidden" name="next" value="presenter">
+    <button class="{% if seance.quiz_sortie_ouvert %}ok{% else %}warn{% endif %}" type="submit">{% if seance.quiz_sortie_ouvert %}Fermer le quiz{% else %}Ouvrir le quiz de sortie{% endif %}</button>
+  </form>
+  {% endif %}
+  {% if slide.type == "atelier" %}
+  <form method="post" action="{% url 'seance_action' seance.pk %}">{% csrf_token %}
+    <input type="hidden" name="action" value="atelier"><input type="hidden" name="next" value="presenter">
+    <button class="{% if seance.atelier_ouvert %}ok{% else %}warn{% endif %}" type="submit">{% if seance.atelier_ouvert %}Fermer la simulation{% else %}Ouvrir la simulation{% endif %}</button>
+  </form>
+  {% endif %}
+  <form method="post" action="{% url 'seance_action' seance.pk %}">{% csrf_token %}
+    <input type="hidden" name="action" value="live_quiz"><input type="hidden" name="next" value="presenter">
+    <button class="ghost" type="submit" title="Une question à la fois, votes sur téléphone">Quiz live</button>
+  </form>
+  {% endif %}
+  <a class="btn ghost" href="{% url 'seance_detail' seance.pk %}">Salle</a>
+  <a class="btn ghost" href="{% url 'resultats' seance.pk %}">Scores</a>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="{% static 'systalink/live.js' %}"></script>
+<script>
+demarrerCompteurFormateur("{% url 'seance_etat_json' seance.pk %}");
+(function () {
+  const deck = document.getElementById("deck");
+  function ajuster() {
+    const s = Math.min(window.innerWidth / 1280, (window.innerHeight - 56) / 720);
+    deck.style.setProperty("--s", s);
+    deck.style.top = Math.max(0, (window.innerHeight - 56 - 720 * s) / 2) + "px";
+  }
+  window.addEventListener("resize", ajuster);
+  ajuster();
+})();
+{% if seance.live_quiz_ouvert %}
+const live = demarrerQuizLiveProjecteur(document.getElementById("live"), "{% url 'seance_action' seance.pk %}");
+{% endif %}
+document.addEventListener("keydown", (e) => {
+  if (e.target.closest("input, textarea")) return;
+  {% if seance.live_quiz_ouvert %}
+  if (e.key === "ArrowRight" || e.key === "PageDown") live.action("live_next");
+  if (e.key === "ArrowLeft" || e.key === "PageUp") live.action("live_prev");
+  if (e.key === " " || e.key === "r" || e.key === "R") { e.preventDefault(); live.action("live_reveal"); }
+  {% else %}
+  if (e.key === "ArrowRight" || e.key === "PageDown" || e.key === " ") document.querySelector("input[value=next]")?.form.submit();
+  if (e.key === "ArrowLeft" || e.key === "PageUp") document.querySelector("input[value=prev]")?.form.submit();
+  {% endif %}
+  if (e.key === "f" || e.key === "F") document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+});
+</script>
+{% endblock %}

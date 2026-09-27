@@ -1,0 +1,5 @@
+<div class="live-badge" title="Participants dont le navigateur est ouvert sur la séance">
+  <span class="pulse" aria-hidden="true"></span>
+  <strong data-live-n>{{ etat.participants_connectes }}</strong>
+  <span>connecté{{ etat.participants_connectes|pluralize }} / <span data-live-prevus>{{ seance.participants_prevus }}</span> prévu{{ seance.participants_prevus|pluralize }}</span>
+</div>

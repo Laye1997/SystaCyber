@@ -1,0 +1,11 @@
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+db.sqlite3
+staticfiles/
+.env
+*.log
+static/systalink/brand/
+media/
+*.sqlite3

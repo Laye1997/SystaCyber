@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Résultats · {{ seance.organisation }}{% endblock %}
+{% block body %}
+<header class="topbar">
+  {% include "includes/logo.html" with tag="CyberSécurité" %}
+  <nav>
+    {% include "includes/compteur.html" %}
+    <a href="{% url 'seance_detail' seance.pk %}">Salle</a>
+    <a href="{% url 'presenter' seance.pk %}">Présenter</a>
+  </nav>
+</header>
+<div class="wrap">
+  <p class="help">{{ seance.organisation }} · {{ seance.date }} · logique KnowBe4 (baseline, simulation, mesure)</p>
+  <h1 class="page-title">Tableau de bord de séance</h1>
+  <div class="grid" style="grid-template-columns:repeat(5,1fr);margin:1.2rem 0">
+    <div class="kpi">
+      <div class="n" data-live-n>{{ etat.participants_connectes }}</div>
+      <span>Connectés maintenant / {{ seance.participants_prevus }} prévus</span>
+    </div>
+    <div class="kpi">
+      <div class="n {% if etat.entree.score_pct != None %}alert{% endif %}">{% if etat.entree.score_pct != None %}{{ etat.entree.score_pct }}%{% else %}—{% endif %}</div>
+      <span>Score connaissances · entrée ({{ etat.entree.n }})</span>
+    </div>
+    <div class="kpi">
+      <div class="n ok">{% if etat.sortie.score_pct != None %}{{ etat.sortie.score_pct }}%{% else %}—{% endif %}</div>
+      <span>Score connaissances · sortie ({{ etat.sortie.n }})</span>
+    </div>
+    <div class="kpi">
+      <div class="n bad">{% if etat.phish.phish_prone_pct != None %}{{ etat.phish.phish_prone_pct }}%{% else %}—{% endif %}</div>
+      <span>Taux d'exposition (Phish-prone) · {{ etat.phish.n }} pers.</span>
+    </div>
+    <div class="kpi">
+      <div class="n">{% if etat.delta_connaissance != None %}{% if etat.delta_connaissance >= 0 %}+{% endif %}{{ etat.delta_connaissance }} pts{% else %}—{% endif %}</div>
+      <span>Progression entrée → sortie</span>
+    </div>
+  </div>
+  <div class="card">
+    <h2 class="page-title" style="font-size:1.15rem">Benchmark KnowBe4 2026</h2>
+    <p>Premier test sans formation : <strong>{{ etat.benchmark_monde }}%</strong> dans le monde, <strong>{{ etat.benchmark_afrique }}%</strong> en Afrique. Après 12 mois d'exercices : <strong>{{ etat.benchmark_cible }}%</strong>.</p>
+    <p class="help">Le taux d'exposition de la séance = part des participants qui ont classé au moins un email piégé comme légitime (équivalent d'un clic sur une simulation).</p>
+    {% if etat.phish.taux_echec_emails != None %}
+      <p>Taux d'échec sur les emails piégés (tous votes) : {{ etat.phish.taux_echec_emails }}% · {{ etat.phish.echecs }} personne{{ etat.phish.echecs|pluralize }} exposée{{ etat.phish.echecs|pluralize }}.</p>
+    {% endif %}
+    <p class="help">Évaluations reçues : {{ etat.evaluations }}</p>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="{% static 'systalink/live.js' %}"></script>
+<script>demarrerCompteurFormateur("{% url 'seance_etat_json' seance.pk %}");</script>
+{% endblock %}

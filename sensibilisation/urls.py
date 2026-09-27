@@ -1,0 +1,34 @@
+from django.urls import path
+
+from . import views
+
+urlpatterns = [
+    path("", views.tableau_de_bord, name="tableau_de_bord"),
+    path("organisations/nouvelle/", views.organisation_creer, name="organisation_creer"),
+    path("seances/nouvelle/", views.seance_creer, name="seance_creer"),
+    path("seances/<int:pk>/", views.seance_detail, name="seance_detail"),
+    path("seances/<int:pk>/modifier/", views.seance_modifier, name="seance_modifier"),
+    path("pack/", views.pack_contenu, name="pack_contenu"),
+    path("pack/questions/nouvelle/", views.question_editer, name="question_creer"),
+    path("pack/questions/<int:pk>/", views.question_editer, name="question_editer"),
+    path("pack/questions/<int:pk>/supprimer/", views.question_supprimer, name="question_supprimer"),
+    path("pack/emails/nouveau/", views.email_editer, name="email_creer"),
+    path("pack/emails/<int:pk>/", views.email_editer, name="email_editer"),
+    path("pack/emails/<int:pk>/supprimer/", views.email_supprimer, name="email_supprimer"),
+    path("pack/slides/<int:pk>/", views.slide_editer, name="slide_editer"),
+    path("seances/<int:pk>/presenter/", views.presenter, name="presenter"),
+    path("seances/<int:pk>/action/", views.seance_action, name="seance_action"),
+    path("seances/<int:pk>/etat.json", views.seance_etat_json, name="seance_etat_json"),
+    path("seances/<int:pk>/resultats/", views.resultats, name="resultats"),
+    path("seances/<int:pk>/rapport.pdf", views.seance_rapport_pdf, name="seance_rapport_pdf"),
+    path("seances/<int:pk>/attestations.pdf", views.seance_attestations_pdf, name="seance_attestations_pdf"),
+    path("rejoindre/", views.joindre, name="joindre"),
+    path("s/<str:code>/", views.participant_salle, name="participant_salle"),
+    path("s/<str:code>/etat.json", views.participant_etat_json, name="participant_etat_json"),
+    path("s/<str:code>/quiz/<str:moment>/", views.participant_quiz, name="participant_quiz"),
+    path("s/<str:code>/atelier/", views.participant_atelier, name="participant_atelier"),
+    path("s/<str:code>/evaluation/", views.participant_evaluation, name="participant_evaluation"),
+    path("s/<str:code>/live/", views.participant_live_vote, name="participant_live_vote"),
+    path("s/<str:code>/atelier/clic/<int:email_id>/", views.participant_clic, name="participant_clic"),
+    path("s/<str:code>/atelier/lecon/<int:email_id>/", views.participant_lecon, name="participant_lecon"),
+]
