@@ -254,3 +254,72 @@ class VideoLocaleTests(TestCase):
             r = self.client.post(reverse("slide_editer", args=[slide.pk]), data)
             self.assertEqual(r.status_code, 200)
             self.assertContains(r, "mp4")
+
+
+class CampagneTests(TestCase):
+    def setUp(self):
+        from datetime import date
+
+        from .models import Campagne, DestinataireCampagne, EmailExercice
+
+        self.org = Organisation.objects.create(nom="BCI", domaine_email="bci.sn", adresse_signalement="soc@bci.sn")
+        self.modele = EmailExercice.objects.create(
+            ordre=1, expediteur_nom="RH", expediteur_adresse="rh@bci-portail.net", objet="Bulletin de paie",
+            corps="Bonjour, connectez-vous : voir le document.", piege=True, indices="Domaine externe",
+            page_lecon="<p>Portail non officiel.</p>", url_affichee="http://bci-portail.net/login",
+        )
+        self.camp = Campagne.objects.create(organisation=self.org, nom="Test", modele=self.modele)
+        self.dest = DestinataireCampagne.objects.create(campagne=self.camp, email="jean@bci.sn", nom="Jean", service="Caisse")
+        self.User = User
+        self.date = date
+
+    def test_envoi_refuse_sans_autorisation(self):
+        from .campagnes import CampagneNonAutorisee, envoyer_campagne
+
+        with self.assertRaises(CampagneNonAutorisee):
+            envoyer_campagne(self.camp)
+        self.dest.refresh_from_db()
+        self.assertIsNone(self.dest.envoye_le)
+
+    def test_envoi_avec_autorisation(self):
+        from django.core import mail
+
+        from .campagnes import envoyer_campagne
+
+        self.camp.autorise_par = "RSSI BCI"
+        self.camp.date_autorisation = self.date.today()
+        self.camp.save()
+        n = envoyer_campagne(self.camp)
+        self.assertEqual(n, 1)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn(f"/t/{self.dest.jeton}/", mail.outbox[0].alternatives[0][0])
+        self.dest.refresh_from_db()
+        self.assertIsNotNone(self.dest.envoye_le)
+
+    def test_clic_trace_puis_lecon(self):
+        r = self.client.get(reverse("campagne_clic", args=[self.dest.jeton]))
+        self.assertEqual(r.status_code, 200)
+        self.dest.refresh_from_db()
+        self.assertIsNotNone(self.dest.clique_le)
+
+    def test_fausse_page_n_enregistre_pas_le_mot_de_passe(self):
+        r = self.client.post(reverse("campagne_clic", args=[self.dest.jeton]), {"u": "jean", "p": "SECRET123"})
+        self.assertRedirects(r, reverse("campagne_lecon", args=[self.dest.jeton]))
+        self.dest.refresh_from_db()
+        self.assertTrue(self.dest.donnees_saisies)
+        # Le mot de passe ne doit être stocké nulle part sur le destinataire.
+        for champ in self.dest._meta.fields:
+            valeur = getattr(self.dest, champ.name)
+            self.assertNotIn("SECRET123", str(valeur))
+
+    def test_stats_campagne(self):
+        self.client.get(reverse("campagne_clic", args=[self.dest.jeton]))
+        stats = self.camp.stats()
+        self.assertEqual(stats["cliques"], 1)
+        self.assertEqual(stats["total"], 1)
+
+    def test_espace_campagnes_exige_connexion(self):
+        self.assertEqual(self.client.get(reverse("campagnes_liste")).status_code, 302)
+        self.User.objects.create_user("f", password="secret12")
+        self.client.login(username="f", password="secret12")
+        self.assertEqual(self.client.get(reverse("campagne_detail", args=[self.camp.pk])).status_code, 200)

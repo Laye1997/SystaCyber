@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Merci{% endblock %}
+{% block body_class %}phone{% endblock %}
+{% block body %}
+<div class="wrap wait">
+  {% include "includes/logo.html" with tag="CyberSécurité" blanc=1 %}
+  <div class="radar"></div>
+  <h1 class="page-title">Merci</h1>
+  <p>Vous pouvez fermer cette page. Le bon réflexe reste le même : en cas de doute, on vérifie avant de cliquer.</p>
+</div>
+{% endblock %}

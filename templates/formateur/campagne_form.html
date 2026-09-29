@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Nouvelle campagne{% endblock %}
+{% block body %}
+<header class="topbar">
+  {% include "includes/logo.html" with tag="CyberSécurité" %}
+  <nav><a href="{% url 'campagnes_liste' %}">Campagnes</a></nav>
+</header>
+<div class="wrap" style="max-width:760px">
+  <h1 class="page-title">Nouvelle campagne de simulation</h1>
+  <div class="card" style="background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.35);margin-bottom:1rem">
+    <strong>Rappel</strong>
+    <p class="help" style="margin:.3rem 0 0">Une campagne n'est envoyée qu'avec une autorisation écrite du client (DG / RSSI). Les résultats sont présentés par service, jamais nominativement. Aucun mot de passe saisi n'est enregistré.</p>
+  </div>
+
+  {% if form.errors or dests_form.errors %}<ul class="messages"><li class="danger-text">Vérifiez les champs en rouge.</li></ul>{% endif %}
+
+  <form method="post" class="card">
+    {% csrf_token %}
+
+    <label for="{{ form.nom.id_for_label }}">Nom de la campagne</label>
+    {{ form.nom }}
+    <p class="help">Ex. : Back-office — septembre</p>
+
+    <label for="{{ form.organisation.id_for_label }}">Organisation cliente</label>
+    {{ form.organisation }}
+    <p class="help"><a href="{% url 'organisation_creer' %}?next=campagne">+ Ajouter une organisation</a></p>
+
+    <label for="{{ form.modele.id_for_label }}">Modèle d'email envoyé</label>
+    {{ form.modele }}
+    <p class="help"><a href="{% url 'email_creer' %}?next=campagne">+ Créer un nouveau modèle d'email</a></p>
+
+    <label for="{{ form.expediteur_affiche.id_for_label }}">Expéditeur affiché</label>
+    {{ form.expediteur_affiche }}
+    <p class="help">Nom et adresse montrés au destinataire. Vide = ceux du modèle.</p>
+
+    <div class="grid grid-2">
+      <div>
+        <label for="{{ form.autorise_par.id_for_label }}">Autorisée par</label>
+        {{ form.autorise_par }}
+        <p class="help">Responsable client (DG, RSSI).</p>
+      </div>
+      <div>
+        <label for="{{ form.date_autorisation.id_for_label }}">Date d'autorisation</label>
+        {{ form.date_autorisation }}
+      </div>
+    </div>
+
+    <label for="{{ dests_form.liste.id_for_label }}">Destinataires <span class="help">(facultatif, modifiable ensuite)</span></label>
+    {{ dests_form.liste }}
+    <p class="help">Une personne par ligne : <code>email ; nom ; service</code>. Vous pourrez aussi en ajouter après la création.</p>
+
+    <button type="submit" style="margin-top:1.2rem">Créer la campagne</button>
+  </form>
+</div>
+{% endblock %}

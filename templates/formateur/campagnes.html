@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Campagnes de simulation{% endblock %}
+{% block body %}
+<header class="topbar">
+  {% include "includes/logo.html" with tag="CyberSécurité" %}
+  <nav>
+    <a href="{% url 'tableau_de_bord' %}">Séances</a>
+    <a href="{% url 'pack_contenu' %}">Contenu</a>
+    <a href="{% url 'campagne_creer' %}">Nouvelle campagne</a>
+    <form action="{% url 'logout' %}" method="post">{% csrf_token %}<button class="ghost" type="submit">Quitter</button></form>
+  </nav>
+</header>
+<div class="wrap">
+  {% if messages %}<ul class="messages">{% for m in messages %}<li>{{ m }}</li>{% endfor %}</ul>{% endif %}
+  <div class="section-head">
+    <div>
+      <h1 class="page-title">Campagnes de simulation</h1>
+      <p class="help">Envoi d'emails d'entraînement dans de vraies boîtes. À réaliser uniquement avec l'autorisation écrite du client.</p>
+    </div>
+    <a class="btn" href="{% url 'campagne_creer' %}">Nouvelle campagne</a>
+  </div>
+  <table class="table">
+    <thead><tr><th>Campagne</th><th>Client</th><th>Statut</th><th>Envoyés</th><th>Clics</th><th></th></tr></thead>
+    <tbody>
+    {% for c in campagnes %}
+      {% with s=c.stats %}
+      <tr>
+        <td><strong>{{ c.nom }}</strong></td>
+        <td>{{ c.organisation }}</td>
+        <td>{% if c.autorisee %}<span class="tag ok">{{ c.get_statut_display }}</span>{% else %}<span class="tag bad">à autoriser</span>{% endif %}</td>
+        <td>{{ s.envoyes }} / {{ s.total }}</td>
+        <td>{{ s.cliques }}</td>
+        <td><a href="{{ c.get_absolute_url }}">Ouvrir</a></td>
+      </tr>
+      {% endwith %}
+    {% empty %}
+      <tr><td colspan="6">Aucune campagne. Créez-en une, puis ajoutez les destinataires.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

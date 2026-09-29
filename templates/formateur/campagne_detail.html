@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}{{ campagne.nom }}{% endblock %}
+{% block body %}
+<header class="topbar">
+  {% include "includes/logo.html" with tag="CyberSécurité" %}
+  <nav><a href="{% url 'campagnes_liste' %}">Campagnes</a><a href="{% url 'tableau_de_bord' %}">Séances</a></nav>
+</header>
+<div class="wrap">
+  {% if messages %}<ul class="messages">{% for m in messages %}<li>{{ m }}</li>{% endfor %}</ul>{% endif %}
+  <div class="section-head">
+    <div>
+      <p class="help" style="margin:0">{{ campagne.organisation }} · modèle : {{ campagne.modele.objet }}</p>
+      <h1 class="page-title">{{ campagne.nom }}</h1>
+    </div>
+    <span class="tag {% if campagne.autorisee %}ok{% else %}bad{% endif %}">{{ campagne.get_statut_display }}</span>
+  </div>
+
+  {% if not campagne.autorisee %}
+  <div class="card" style="background:rgba(229,72,77,.08);border-color:rgba(229,72,77,.35)">
+    <strong class="bad">Campagne non autorisée</strong>
+    <p class="help" style="margin:.3rem 0 0">Renseignez « Autorisée par » et la date d'autorisation dans l'administration avant de lancer l'envoi. Sans cela, aucun email ne part.</p>
+  </div>
+  {% endif %}
+
+  {% if not envoi_reel %}
+  <div class="card" style="background:rgba(12,95,247,.08);margin-top:1rem">
+    <strong>Mode test</strong>
+    <p class="help" style="margin:.3rem 0 0">Aucun serveur d'envoi n'est configuré : les emails s'affichent dans la console du serveur, ils ne partent pas réellement. Idéal pour tester le suivi en interne.</p>
+  </div>
+  {% endif %}
+
+  <div class="grid grid-3" style="margin-top:1rem">
+    <div class="kpi"><div class="n">{{ stats.envoyes }}</div><span>envoyés / {{ stats.total }}</span></div>
+    <div class="kpi"><div class="n alert">{{ stats.taux_clic }}%</div><span>ont cliqué ({{ stats.cliques }})</span></div>
+    <div class="kpi"><div class="n bad">{{ stats.taux_saisie }}%</div><span>ont saisi des données ({{ stats.saisies }})</span></div>
+  </div>
+
+  <div class="grid grid-2" style="margin-top:1rem">
+    <form method="post" action="{% url 'campagne_destinataires' campagne.pk %}" class="card">
+      {% csrf_token %}
+      <h2 class="page-title">Ajouter des destinataires</h2>
+      {{ form.as_p }}
+      <button type="submit" style="margin-top:.6rem">Ajouter</button>
+    </form>
+    <div class="card">
+      <h2 class="page-title">Lancer l'envoi</h2>
+      <p class="help">{{ stats.total }} destinataire(s), dont {{ stats.envoyes }} déjà contacté(s).</p>
+      <form method="post" action="{% url 'campagne_lancer' campagne.pk %}" onsubmit="return confirm('Envoyer les emails de simulation aux destinataires non encore contactés ?');">
+        {% csrf_token %}
+        <button type="submit" class="{% if campagne.autorisee %}warn{% else %}ghost{% endif %}" {% if not campagne.autorisee %}disabled title="Autorisation requise"{% endif %}>Envoyer maintenant</button>
+      </form>
+      <p class="help" style="margin-top:.8rem">Ouverts : {{ stats.ouverts }} · Signalements : {{ stats.signales }} ({{ stats.taux_signalement }}%)</p>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:1rem">
+    <h2 class="page-title">Suivi individuel</h2>
+    <p class="help">Résultats à présenter au client de façon agrégée, par service.</p>
+    <table class="table flat">
+      <thead><tr><th>Email</th><th>Service</th><th>Envoyé</th><th>Ouvert</th><th>Cliqué</th><th>Saisie</th><th>Signalé</th></tr></thead>
+      <tbody>
+      {% for d in destinataires %}
+        <tr>
+          <td>{{ d.email }}</td>
+          <td>{{ d.service|default:"—" }}</td>
+          <td>{% if d.envoye_le %}<span class="tag ok">oui</span>{% else %}<span class="tag">—</span>{% endif %}</td>
+          <td>{% if d.ouvert_le %}<span class="tag ok">oui</span>{% else %}<span class="tag">—</span>{% endif %}</td>
+          <td>{% if d.clique_le %}<span class="tag bad">oui</span>{% else %}<span class="tag">—</span>{% endif %}</td>
+          <td>{% if d.donnees_saisies %}<span class="tag bad">oui</span>{% else %}<span class="tag">—</span>{% endif %}</td>
+          <td>
+            <form method="post" action="{% url 'campagne_signaler' campagne.pk d.pk %}" class="inline-form">
+              {% csrf_token %}
+              <button type="submit" class="{% if d.a_signale %}ok{% else %}ghost{% endif %}">{% if d.a_signale %}signalé{% else %}noter{% endif %}</button>
+            </form>
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="7">Aucun destinataire pour l'instant.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -321,3 +321,127 @@ class VoteLive(models.Model):
     class Meta:
         unique_together = [("seance", "question", "jeton_participant")]
         verbose_name = "vote quiz live"
+
+
+# ---------------------------------------------------------------- Campagnes réelles
+def generer_jeton():
+    return secrets.token_urlsafe(24)
+
+
+class Campagne(models.Model):
+    """Campagne de simulation de phishing envoyée dans de vraies boîtes.
+
+    Encadrée : une campagne ne peut être lancée qu'avec une autorisation
+    renseignée (autorise_par + date_autorisation). Aucun mot de passe saisi
+    sur la fausse page n'est jamais enregistré (voir DestinataireCampagne).
+    """
+
+    STATUTS = [
+        ("brouillon", "Brouillon"),
+        ("prete", "Prête à lancer"),
+        ("lancee", "Lancée"),
+        ("terminee", "Terminée"),
+    ]
+    organisation = models.ForeignKey(Organisation, on_delete=models.PROTECT, related_name="campagnes")
+    nom = models.CharField(max_length=150, help_text="Ex. : Back-office — septembre")
+    modele = models.ForeignKey(
+        EmailExercice,
+        on_delete=models.PROTECT,
+        related_name="campagnes",
+        help_text="Le modèle d'email envoyé (bibliothèque du pack).",
+    )
+    expediteur_affiche = models.CharField(
+        "Expéditeur affiché",
+        max_length=200,
+        blank=True,
+        help_text="Nom et adresse montrés au destinataire. Vide = ceux du modèle.",
+    )
+    autorise_par = models.CharField(
+        "Autorisée par",
+        max_length=200,
+        blank=True,
+        help_text="Nom et fonction du responsable client (DG, RSSI) qui autorise la campagne.",
+    )
+    date_autorisation = models.DateField("Date d'autorisation", null=True, blank=True)
+    statut = models.CharField(max_length=12, choices=STATUTS, default="brouillon")
+    cree_le = models.DateTimeField(auto_now_add=True)
+    lance_le = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-cree_le"]
+        verbose_name = "campagne de simulation"
+        verbose_name_plural = "campagnes de simulation"
+
+    def __str__(self):
+        return f"{self.nom} · {self.organisation}"
+
+    def get_absolute_url(self):
+        return reverse("campagne_detail", args=[self.pk])
+
+    @property
+    def autorisee(self):
+        return bool(self.autorise_par and self.date_autorisation)
+
+    def personnaliser(self, texte, destinataire=None):
+        org = self.organisation
+        remplacements = {
+            "{entreprise}": org.nom,
+            "{domaine}": org.domaine_email or "[domaine]",
+            "{contact_it}": org.contact_it or "[informatique]",
+            "{signalement}": org.adresse_signalement or "[signalement]",
+            "{nom}": (destinataire.nom if destinataire and destinataire.nom else "Bonjour"),
+            "{service}": (destinataire.service if destinataire else ""),
+        }
+        for jeton, valeur in remplacements.items():
+            texte = texte.replace(jeton, valeur)
+        return texte
+
+    def stats(self):
+        dests = self.destinataires.all()
+        total = dests.count()
+        envoyes = dests.exclude(envoye_le=None).count()
+        ouverts = dests.exclude(ouvert_le=None).count()
+        cliques = dests.exclude(clique_le=None).count()
+        saisies = dests.filter(donnees_saisies=True).count()
+        signales = dests.filter(a_signale=True).count()
+        base = envoyes or total or 1
+        return {
+            "total": total,
+            "envoyes": envoyes,
+            "ouverts": ouverts,
+            "cliques": cliques,
+            "saisies": saisies,
+            "signales": signales,
+            "taux_clic": round(100 * cliques / base, 1),
+            "taux_saisie": round(100 * saisies / base, 1),
+            "taux_signalement": round(100 * signales / base, 1),
+        }
+
+
+class DestinataireCampagne(models.Model):
+    campagne = models.ForeignKey(Campagne, on_delete=models.CASCADE, related_name="destinataires")
+    email = models.EmailField()
+    nom = models.CharField(max_length=120, blank=True)
+    service = models.CharField(max_length=120, blank=True)
+    jeton = models.CharField(max_length=64, unique=True, default=generer_jeton, editable=False)
+    envoye_le = models.DateTimeField(null=True, blank=True)
+    ouvert_le = models.DateTimeField(null=True, blank=True)
+    clique_le = models.DateTimeField(null=True, blank=True)
+    # Vrai si la personne a soumis la fausse page. On n'enregistre JAMAIS
+    # ce qui a été tapé : seul le fait de la saisie est conservé.
+    donnees_saisies = models.BooleanField("A saisi des données sur la fausse page", default=False)
+    a_signale = models.BooleanField("A signalé l'email", default=False)
+    a_lu_lecon = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ["service", "email"]
+        unique_together = [("campagne", "email")]
+        verbose_name = "destinataire de campagne"
+        verbose_name_plural = "destinataires de campagne"
+
+    def __str__(self):
+        return self.email
+
+    @property
+    def echec(self):
+        return bool(self.clique_le or self.donnees_saisies)

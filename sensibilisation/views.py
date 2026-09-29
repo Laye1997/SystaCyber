@@ -61,12 +61,16 @@ def tableau_de_bord(request):
 
 @login_required
 def organisation_creer(request):
+    # ?next=campagne : revenir au formulaire de campagne avec la nouvelle organisation choisie.
+    destination = request.GET.get("next") or request.POST.get("next") or ""
     form = OrganisationForm(request.POST or None)
     if form.is_valid():
         org = form.save()
         messages.success(request, f"{org.nom} enregistrée.")
+        if destination == "campagne":
+            return redirect(f"{reverse('campagne_creer')}?organisation={org.pk}")
         return redirect("tableau_de_bord")
-    return render(request, "formateur/organisation_form.html", {"form": form})
+    return render(request, "formateur/organisation_form.html", {"form": form, "next": destination})
 
 
 @login_required
@@ -138,12 +142,15 @@ def question_supprimer(request, pk):
 @login_required
 def email_editer(request, pk=None):
     email = get_object_or_404(EmailExercice, pk=pk) if pk else None
+    destination = request.GET.get("next") or request.POST.get("next") or ""
     form = EmailExerciceForm(request.POST or None, instance=email)
     if form.is_valid():
-        form.save()
+        obj = form.save()
         messages.success(request, "Email d'exercice enregistré.")
+        if destination == "campagne":
+            return redirect(f"{reverse('campagne_creer')}?modele={obj.pk}")
         return redirect("pack_contenu")
-    return render(request, "formateur/email_form.html", {"form": form, "email": email})
+    return render(request, "formateur/email_form.html", {"form": form, "email": email, "next": destination})
 
 
 @login_required
@@ -609,3 +616,168 @@ def participant_evaluation(request, code):
         )
         return render(request, "participant/merci.html", {"seance": seance})
     return render(request, "participant/evaluation.html", {"seance": seance, "form": form})
+
+
+# ---------------------------------------------------------------- Campagnes réelles
+from django.conf import settings as _settings  # noqa: E402
+from django.http import HttpResponse  # noqa: E402
+from django.utils import timezone as _tz  # noqa: E402
+
+from .campagnes import CampagneNonAutorisee, envoyer_campagne  # noqa: E402
+from .forms import CampagneForm, DestinatairesForm  # noqa: E402
+from .models import Campagne, DestinataireCampagne  # noqa: E402
+
+
+@login_required
+def campagnes_liste(request):
+    campagnes = Campagne.objects.select_related("organisation", "modele")
+    return render(request, "formateur/campagnes.html", {"campagnes": campagnes})
+
+
+@login_required
+def campagne_creer(request):
+    initial = {}
+    if request.method == "GET":
+        for champ in ("organisation", "modele"):
+            if request.GET.get(champ):
+                initial[champ] = request.GET.get(champ)
+    form = CampagneForm(request.POST or None, initial=initial)
+    dests_form = DestinatairesForm(request.POST or None)
+    dests_form.fields["liste"].required = False
+    if form.is_valid() and dests_form.is_valid():
+        campagne = form.save()
+        ajout = 0
+        for d in dests_form.destinataires():
+            _, cree = DestinataireCampagne.objects.get_or_create(
+                campagne=campagne, email=d["email"], defaults={"nom": d["nom"], "service": d["service"]}
+            )
+            ajout += int(cree)
+        if ajout:
+            messages.success(request, f"Campagne créée avec {ajout} destinataire(s).")
+        else:
+            messages.success(request, "Campagne créée. Ajoutez les destinataires.")
+        return redirect(campagne)
+    return render(request, "formateur/campagne_form.html", {"form": form, "dests_form": dests_form})
+
+
+@login_required
+def campagne_detail(request, pk):
+    campagne = get_object_or_404(Campagne.objects.select_related("organisation", "modele"), pk=pk)
+    return render(
+        request,
+        "formateur/campagne_detail.html",
+        {
+            "campagne": campagne,
+            "form": DestinatairesForm(),
+            "stats": campagne.stats(),
+            "destinataires": campagne.destinataires.all(),
+            "envoi_reel": bool(_settings.EMAIL_HOST),
+        },
+    )
+
+
+@login_required
+@require_POST
+def campagne_destinataires(request, pk):
+    campagne = get_object_or_404(Campagne, pk=pk)
+    form = DestinatairesForm(request.POST)
+    if form.is_valid():
+        ajout = 0
+        for d in form.destinataires():
+            _, cree = DestinataireCampagne.objects.get_or_create(
+                campagne=campagne, email=d["email"], defaults={"nom": d["nom"], "service": d["service"]}
+            )
+            ajout += int(cree)
+        messages.success(request, f"{ajout} destinataire(s) ajouté(s).")
+    else:
+        messages.error(request, "Liste invalide.")
+    return redirect(campagne)
+
+
+@login_required
+@require_POST
+def campagne_lancer(request, pk):
+    campagne = get_object_or_404(Campagne, pk=pk)
+    try:
+        n = envoyer_campagne(campagne, request)
+    except CampagneNonAutorisee as e:
+        messages.error(request, str(e))
+        return redirect(campagne)
+    messages.success(request, f"{n} email(s) envoyé(s).") if n else messages.info(
+        request, "Aucun destinataire à contacter."
+    )
+    return redirect(campagne)
+
+
+# --- Traçage (liens publics contenus dans les emails) ---
+def campagne_pixel(request, jeton):
+    dest = DestinataireCampagne.objects.filter(jeton=jeton).first()
+    if dest and not dest.ouvert_le:
+        dest.ouvert_le = _tz.now()
+        dest.save(update_fields=["ouvert_le"])
+    gif = (
+        b"GIF89a\x01\x00\x01\x00\x80\x00\x00\xff\xff\xff\x00\x00\x00!\xf9\x04\x01\x00"
+        b"\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;"
+    )
+    return HttpResponse(gif, content_type="image/gif")
+
+
+def campagne_clic(request, jeton):
+    """Lien piégé cliqué : on marque le clic et on montre la leçon.
+
+    Si la fausse page est soumise, on note seulement qu'il y a eu une saisie.
+    Rien de ce qui est tapé n'est enregistré.
+    """
+    dest = get_object_or_404(
+        DestinataireCampagne.objects.select_related("campagne", "campagne__modele"), jeton=jeton
+    )
+    now = _tz.now()
+    if not dest.clique_le:
+        dest.clique_le = now
+        if not dest.ouvert_le:
+            dest.ouvert_le = now
+        dest.save(update_fields=["clique_le", "ouvert_le"])
+    if request.method == "POST":
+        if not dest.donnees_saisies:
+            dest.donnees_saisies = True
+            dest.save(update_fields=["donnees_saisies"])
+        return redirect("campagne_lecon", jeton=jeton)
+    return render(
+        request,
+        "campagne/faux_portail.html",
+        {"dest": dest, "entreprise": dest.campagne.organisation.nom},
+    )
+
+
+def campagne_lecon(request, jeton):
+    dest = get_object_or_404(
+        DestinataireCampagne.objects.select_related("campagne", "campagne__modele"), jeton=jeton
+    )
+    if request.method == "POST":
+        if not dest.a_lu_lecon:
+            dest.a_lu_lecon = True
+            dest.save(update_fields=["a_lu_lecon"])
+        return render(request, "campagne/merci.html", {"dest": dest})
+    campagne = dest.campagne
+    email = campagne.modele
+    return render(
+        request,
+        "campagne/lecon.html",
+        {
+            "dest": dest,
+            "entreprise": campagne.organisation.nom,
+            "objet": campagne.personnaliser(email.objet, dest),
+            "indices": [campagne.personnaliser(i, dest) for i in email.liste_indices()],
+            "lecon": campagne.personnaliser(email.page_lecon or "", dest),
+            "signalement": campagne.organisation.adresse_signalement,
+        },
+    )
+
+
+@login_required
+@require_POST
+def campagne_signaler(request, pk, dest_pk):
+    dest = get_object_or_404(DestinataireCampagne, pk=dest_pk, campagne_id=pk)
+    dest.a_signale = not dest.a_signale
+    dest.save(update_fields=["a_signale"])
+    return redirect("campagne_detail", pk=pk)

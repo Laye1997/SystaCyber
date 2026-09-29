@@ -6,6 +6,7 @@
   {% include "includes/logo.html" with tag="CyberSécurité" %}
   <nav>
     <a href="{% url 'pack_contenu' %}">Questions et contenu</a>
+    <a href="{% url 'campagnes_liste' %}">Campagnes</a>
     <a href="{% url 'organisation_creer' %}">Nouvelle organisation</a>
     <a href="{% url 'seance_creer' %}">Nouvelle séance</a>
     <form action="{% url 'logout' %}" method="post">{% csrf_token %}<button class="ghost" type="submit">Quitter</button></form>

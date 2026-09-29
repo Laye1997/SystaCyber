@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}C'était un test de sécurité{% endblock %}
+{% block body_class %}phone{% endblock %}
+{% block body %}
+<div class="wrap">
+  {% include "includes/logo.html" with tag="CyberSécurité" blanc=1 %}
+  <div class="lecon-alerte">
+    <span class="lecon-ico" aria-hidden="true">!</span>
+    <div>
+      <h1 class="page-title">C'était un test de sécurité</h1>
+      <p class="help">Cet email faisait partie d'un exercice de sensibilisation de {{ entreprise }}. Aucune donnée n'a été collectée. Prenez une minute : la prochaine fois, ce pourrait être une vraie attaque.</p>
+    </div>
+  </div>
+
+  <article class="mail lecon-mail">
+    <h2>{{ objet }}</h2>
+  </article>
+
+  {% if indices %}
+  <h2 class="lecon-h">Les signaux qui devaient alerter</h2>
+  <ol class="lecon-indices">{% for i in indices %}<li>{{ i }}</li>{% endfor %}</ol>
+  {% endif %}
+
+  {% if lecon %}<div class="card lecon-texte">{{ lecon|safe }}</div>{% endif %}
+
+  <div class="lecon-reflexe">
+    <strong>Le réflexe</strong>
+    <span>Ne jamais saisir vos identifiants depuis un lien reçu par email. En cas de doute{% if signalement %}, signalez à {{ signalement }}{% endif %}.</span>
+  </div>
+
+  <form method="post">
+    {% csrf_token %}
+    <button class="btn block" type="submit">J'ai compris</button>
+  </form>
+</div>
+{% endblock %}

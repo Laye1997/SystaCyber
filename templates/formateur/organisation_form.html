@@ -9,6 +9,7 @@
   <h1 class="page-title">Organisation cliente</h1>
   <form method="post" class="card">
     {% csrf_token %}
+    {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
     {{ form.as_p }}
     <button type="submit" style="margin-top:1rem">Enregistrer</button>
   </form>

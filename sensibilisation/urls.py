@@ -22,6 +22,17 @@ urlpatterns = [
     path("seances/<int:pk>/resultats/", views.resultats, name="resultats"),
     path("seances/<int:pk>/rapport.pdf", views.seance_rapport_pdf, name="seance_rapport_pdf"),
     path("seances/<int:pk>/attestations.pdf", views.seance_attestations_pdf, name="seance_attestations_pdf"),
+    # Campagnes de simulation (espace formateur)
+    path("campagnes/", views.campagnes_liste, name="campagnes_liste"),
+    path("campagnes/nouvelle/", views.campagne_creer, name="campagne_creer"),
+    path("campagnes/<int:pk>/", views.campagne_detail, name="campagne_detail"),
+    path("campagnes/<int:pk>/destinataires/", views.campagne_destinataires, name="campagne_destinataires"),
+    path("campagnes/<int:pk>/lancer/", views.campagne_lancer, name="campagne_lancer"),
+    path("campagnes/<int:pk>/signaler/<int:dest_pk>/", views.campagne_signaler, name="campagne_signaler"),
+    # Traçage : liens publics contenus dans les emails
+    path("t/<str:jeton>/", views.campagne_clic, name="campagne_clic"),
+    path("t/<str:jeton>/lecon/", views.campagne_lecon, name="campagne_lecon"),
+    path("px/<str:jeton>.gif", views.campagne_pixel, name="campagne_pixel"),
     path("rejoindre/", views.joindre, name="joindre"),
     path("s/<str:code>/", views.participant_salle, name="participant_salle"),
     path("s/<str:code>/etat.json", views.participant_etat_json, name="participant_etat_json"),

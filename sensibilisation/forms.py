@@ -124,3 +124,43 @@ class SlideForm(forms.ModelForm):
             "corps": forms.Textarea(attrs={"rows": 8}),
             "notes": forms.Textarea(attrs={"rows": 3}),
         }
+
+
+class CampagneForm(forms.ModelForm):
+    class Meta:
+        from .models import Campagne
+
+        model = Campagne
+        fields = ["nom", "organisation", "modele", "expediteur_affiche", "autorise_par", "date_autorisation"]
+        widgets = {"date_autorisation": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d")}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from .models import EmailExercice
+
+        self.fields["date_autorisation"].input_formats = ["%Y-%m-%d"]
+        self.fields["modele"].queryset = EmailExercice.objects.order_by("categorie", "objet")
+        self.fields["modele"].label_from_instance = lambda e: (
+            f"{'[' + e.categorie + '] ' if e.categorie else ''}{e.objet}"
+        )
+
+
+class DestinatairesForm(forms.Form):
+    liste = forms.CharField(
+        label="Destinataires",
+        widget=forms.Textarea(attrs={"rows": 8, "placeholder": "email ; nom ; service\njean@bci-banque.sn ; Jean Diop ; Caisse"}),
+        help_text="Une personne par ligne : email, puis nom et service séparés par « ; » (facultatifs).",
+    )
+
+    def destinataires(self):
+        lignes = []
+        for brut in self.cleaned_data["liste"].splitlines():
+            brut = brut.strip()
+            if not brut:
+                continue
+            parts = [p.strip() for p in brut.replace(",", ";").split(";")]
+            email = parts[0]
+            if "@" not in email:
+                continue
+            lignes.append({"email": email, "nom": parts[1] if len(parts) > 1 else "", "service": parts[2] if len(parts) > 2 else ""})
+        return lignes

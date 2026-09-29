@@ -72,3 +72,17 @@ class ReponseQuizAdmin(admin.ModelAdmin):
 class EvaluationAdmin(admin.ModelAdmin):
     list_display = ("seance", "cree_le")
     list_filter = ("seance",)
+
+
+class DestinataireInline(admin.TabularInline):
+    model = models.DestinataireCampagne
+    extra = 0
+    readonly_fields = ("jeton", "envoye_le", "ouvert_le", "clique_le", "donnees_saisies", "a_signale")
+    fields = ("email", "nom", "service") + readonly_fields
+
+
+@admin.register(models.Campagne)
+class CampagneAdmin(admin.ModelAdmin):
+    list_display = ("nom", "organisation", "statut", "autorise_par", "date_autorisation")
+    list_filter = ("organisation", "statut")
+    inlines = [DestinataireInline]
