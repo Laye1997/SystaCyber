@@ -77,6 +77,9 @@ DATABASES = {
     "default": dj_database_url.config(
         default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
         conn_max_age=600,
+        # Vérifie que la connexion est vivante avant chaque requête et
+        # reconnecte si l'hébergeur de base l'a coupée (évite les erreurs 500).
+        conn_health_checks=True,
     )
 }
 
