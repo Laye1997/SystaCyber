@@ -708,6 +708,11 @@ def campagne_lancer(request, pk):
     except CampagneNonAutorisee as e:
         messages.error(request, str(e))
         return redirect(campagne)
+    except Exception as e:
+        # Erreur d'envoi (SMTP refusé, expéditeur non validé, etc.) :
+        # on affiche le message au lieu de planter en 500.
+        messages.error(request, f"Échec de l'envoi : {e}")
+        return redirect(campagne)
     messages.success(request, f"{n} email(s) envoyé(s).") if n else messages.info(
         request, "Aucun destinataire à contacter."
     )
