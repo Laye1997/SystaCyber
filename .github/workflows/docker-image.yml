@@ -1,7 +1,7 @@
 name: Build and push Docker image
 
-# Construit l'image Docker sur les serveurs GitHub et la pousse sur Docker Hub.
-# Aucun Docker local requis. Déclenché à chaque push sur main, ou manuellement.
+# Construit l'image sur les serveurs GitHub et la pousse sur Docker Hub.
+# Un seul secret requis : DOCKERHUB_TOKEN (l'identifiant laye1997 est public).
 
 on:
   push:
@@ -18,7 +18,7 @@ jobs:
       - name: Connexion à Docker Hub
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          username: laye1997
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Construire et pousser l'image
@@ -26,4 +26,4 @@ jobs:
         with:
           context: .
           push: true
-          tags: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/systacyber:latest
+          tags: docker.io/laye1997/systacyber:latest
