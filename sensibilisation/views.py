@@ -53,6 +53,11 @@ def _premiere_lecon(seance, jeton):
     return None
 
 
+def healthz(request):
+    """Point de contrôle de santé pour l'hébergeur : renvoie 200 sans auth ni base."""
+    return JsonResponse({"status": "ok"})
+
+
 @login_required
 def tableau_de_bord(request):
     seances = Seance.objects.select_related("organisation")[:40]
