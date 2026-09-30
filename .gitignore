@@ -6,6 +6,8 @@ db.sqlite3
 staticfiles/
 .env
 *.log
-static/systalink/brand/
+static/systalink/brand/*
+!static/systalink/brand/img_1_1215x1504.jpeg
+!static/systalink/brand/img_20_1343x884.jpeg
 media/
 *.sqlite3

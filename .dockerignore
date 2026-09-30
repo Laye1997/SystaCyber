@@ -11,6 +11,5 @@ db.sqlite3
 *.sqlite3
 media/
 staticfiles/
-static/systalink/brand/
 DEPLOIEMENT.md
 docs/
