@@ -9,11 +9,11 @@ from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.core.management.base import BaseCommand
 
-from sensibilisation.models import Module
+from sensibilisation.models import Question
 
 
 class Command(BaseCommand):
-    help = "Crée le compte admin et charge le contenu s'ils n'existent pas encore."
+    help = "Crée le compte admin et charge tout le contenu s'ils n'existent pas encore."
 
     def handle(self, *args, **options):
         User = get_user_model()
@@ -27,11 +27,15 @@ class Command(BaseCommand):
         else:
             self.stdout.write(f"Compte '{username}' déjà présent.")
 
-        if not Module.objects.exists():
-            call_command("charger_programme")
+        # Base neuve : on charge TOUT le contenu (modules, slides, quiz,
+        # emails, cas pratiques, scénario). charger_pack est destructif, donc
+        # on ne l'exécute que si le contenu n'existe pas encore.
+        if not Question.objects.exists():
+            call_command("charger_pack")
+            call_command("charger_modeles")
+            self.stdout.write(self.style.SUCCESS("Contenu complet chargé."))
         else:
-            self.stdout.write("Programme déjà chargé.")
+            call_command("charger_modeles")
+            self.stdout.write("Contenu déjà présent.")
 
-        # Idempotent : n'ajoute que les modèles manquants.
-        call_command("charger_modeles")
         self.stdout.write(self.style.SUCCESS("Initialisation terminée."))
