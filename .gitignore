@@ -11,3 +11,4 @@ static/systalink/brand/*
 !static/systalink/brand/img_20_1343x884.jpeg
 media/
 *.sqlite3
+DEPLOIEMENT.md
