@@ -34,19 +34,36 @@ def pixel_ouverture(destinataire, request=None):
 
 
 def corps_html(campagne, destinataire, request=None):
-    """Rend l'email : texte du modèle, lien piégé, pixel d'ouverture."""
+    """Rend l'email HTML envoyé au destinataire.
+
+    Deux modes selon le corps du modèle :
+    - Si le corps contient le repère {lien}, il est traité comme du **HTML
+      personnalisé** (images, boutons, faux calendrier/PDF…) et {lien} est
+      remplacé par le lien piégé là où le formateur l'a placé.
+    - Sinon, comportement simple : le texte est échappé en paragraphes et un
+      bouton cliquable est ajouté automatiquement.
+    Dans les deux cas, un pixel invisible mesure l'ouverture.
+    """
     modele = campagne.modele
-    texte = campagne.personnaliser(modele.corps, destinataire)
-    paragraphes = "".join(f"<p>{escape(l)}</p>" for l in texte.splitlines() if l.strip())
     lien = lien_piege(destinataire, request)
+    texte = campagne.personnaliser(modele.corps, destinataire)
+    pixel = f'<img src="{pixel_ouverture(destinataire, request)}" width="1" height="1" alt="" style="display:none">'
+    enveloppe = 'font-family:Arial,sans-serif;font-size:15px;color:#1a2433;line-height:1.5'
+
+    if "{lien}" in texte:
+        # HTML personnalisé rédigé par le formateur (contenu de confiance).
+        corps = texte.replace("{lien}", lien)
+        return f'<div style="{enveloppe}">{corps}{pixel}</div>'
+
+    # Mode simple : texte échappé + bouton automatique.
+    paragraphes = "".join(f"<p>{escape(l)}</p>" for l in texte.splitlines() if l.strip())
     libelle = campagne.personnaliser(modele.url_affichee, destinataire) or lien
     bouton = (
         f'<p><a href="{lien}" '
         'style="display:inline-block;padding:10px 18px;background:#0c5ff7;color:#fff;'
         'border-radius:6px;text-decoration:none">{}</a></p>'.format(escape(libelle))
     )
-    pixel = f'<img src="{pixel_ouverture(destinataire, request)}" width="1" height="1" alt="" style="display:none">'
-    return f'<div style="font-family:Arial,sans-serif;font-size:15px;color:#1a2433">{paragraphes}{bouton}{pixel}</div>'
+    return f'<div style="{enveloppe}">{paragraphes}{bouton}{pixel}</div>'
 
 
 def envoyer_campagne(campagne, request=None):
@@ -67,7 +84,12 @@ def envoyer_campagne(campagne, request=None):
     for dest in campagne.destinataires.filter(envoye_le=None):
         sujet = campagne.personnaliser(modele.objet, dest)
         html = corps_html(campagne, dest, request)
-        texte_brut = campagne.personnaliser(modele.corps, dest) + "\n\n" + lien_piege(dest, request)
+        lien_dest = lien_piege(dest, request)
+        corps_perso = campagne.personnaliser(modele.corps, dest)
+        if "{lien}" in corps_perso:
+            texte_brut = corps_perso.replace("{lien}", lien_dest)
+        else:
+            texte_brut = corps_perso + "\n\n" + lien_dest
         msg = EmailMultiAlternatives(sujet, texte_brut, expediteur, [dest.email])
         msg.attach_alternative(html, "text/html")
         msg.send(fail_silently=False)
