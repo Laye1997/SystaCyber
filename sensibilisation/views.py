@@ -41,6 +41,23 @@ def _jeton(request):
     return request.session["jeton"]
 
 
+def _ip_client(request):
+    xff = request.META.get("HTTP_X_FORWARDED_FOR")
+    return xff.split(",")[0].strip() if xff else request.META.get("REMOTE_ADDR", "?")
+
+
+def _trop_de_tentatives(request, cle, limite=20, fenetre=60):
+    """Limitation de débit simple (anti-abus) basée sur le cache."""
+    from django.core.cache import cache
+
+    k = f"rl:{cle}:{_ip_client(request)}"
+    n = cache.get(k, 0)
+    if n >= limite:
+        return True
+    cache.set(k, n + 1, fenetre)
+    return False
+
+
 def _seance_code(code):
     return get_object_or_404(Seance, code=code.upper())
 
@@ -391,6 +408,9 @@ def resultats(request, pk):
 
 def joindre(request):
     form = JoindreForm(request.POST or None)
+    if request.method == "POST" and _trop_de_tentatives(request, "joindre"):
+        messages.error(request, "Trop de tentatives. Patientez une minute avant de réessayer.")
+        return render(request, "participant/joindre.html", {"form": form})
     if form.is_valid():
         code = form.cleaned_data["code"]
         seance = Seance.objects.filter(code=code).first()
@@ -688,6 +708,25 @@ def campagne_creer(request):
             messages.success(request, "Campagne créée. Ajoutez les destinataires.")
         return redirect(campagne)
     return render(request, "formateur/campagne_form.html", {"form": form, "dests_form": dests_form})
+
+
+@login_required
+def campagne_modifier(request, pk):
+    campagne = get_object_or_404(Campagne, pk=pk)
+    form = CampagneForm(request.POST or None, instance=campagne)
+    # Garder le modèle actuel sélectionnable même s'il est hors bibliothèque.
+    from django.db.models import Q
+
+    from .models import EmailExercice
+
+    form.fields["modele"].queryset = (
+        EmailExercice.objects.filter(Q(bibliotheque=True) | Q(pk=campagne.modele_id)).order_by("categorie", "objet")
+    )
+    if form.is_valid():
+        form.save()
+        messages.success(request, "Campagne mise à jour.")
+        return redirect(campagne)
+    return render(request, "formateur/campagne_form.html", {"form": form, "dests_form": None, "edition": True})
 
 
 @login_required

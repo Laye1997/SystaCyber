@@ -7,7 +7,7 @@ Garde-fous :
 """
 
 from django.conf import settings
-from django.core.mail import EmailMultiAlternatives
+from django.core.mail import EmailMultiAlternatives, get_connection
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import escape
@@ -81,26 +81,37 @@ def envoyer_campagne(campagne, request=None):
         f"{modele.expediteur_nom} <{campagne.personnaliser(modele.expediteur_adresse)}>"
     )
     envoyes, echecs, derniere_erreur = 0, 0, None
-    for dest in campagne.destinataires.filter(envoye_le=None):
-        sujet = campagne.personnaliser(modele.objet, dest)
-        html = corps_html(campagne, dest, request)
-        lien_dest = lien_piege(dest, request)
-        corps_perso = campagne.personnaliser(modele.corps, dest)
-        if "{lien}" in corps_perso:
-            texte_brut = corps_perso.replace("{lien}", lien_dest)
-        else:
-            texte_brut = corps_perso + "\n\n" + lien_dest
-        msg = EmailMultiAlternatives(sujet, texte_brut, expediteur, [dest.email])
-        msg.attach_alternative(html, "text/html")
-        try:
-            msg.send(fail_silently=False)
-        except Exception as e:  # une adresse invalide ne doit pas bloquer les autres
-            echecs += 1
-            derniere_erreur = e
-            continue
-        dest.envoye_le = timezone.now()
-        dest.save(update_fields=["envoye_le"])
-        envoyes += 1
+    # Une seule connexion SMTP réutilisée pour tout l'envoi (beaucoup plus rapide
+    # qu'une connexion par email : évite les lenteurs sur de gros envois).
+    connection = get_connection()
+    try:
+        connection.open()
+    except Exception as e:
+        # Impossible d'ouvrir la connexion (identifiants SMTP, réseau…) : on remonte.
+        raise e
+    try:
+        for dest in campagne.destinataires.filter(envoye_le=None):
+            sujet = campagne.personnaliser(modele.objet, dest)
+            html = corps_html(campagne, dest, request)
+            lien_dest = lien_piege(dest, request)
+            corps_perso = campagne.personnaliser(modele.corps, dest)
+            if "{lien}" in corps_perso:
+                texte_brut = corps_perso.replace("{lien}", lien_dest)
+            else:
+                texte_brut = corps_perso + "\n\n" + lien_dest
+            msg = EmailMultiAlternatives(sujet, texte_brut, expediteur, [dest.email], connection=connection)
+            msg.attach_alternative(html, "text/html")
+            try:
+                msg.send(fail_silently=False)
+            except Exception as e:  # une adresse invalide ne doit pas bloquer les autres
+                echecs += 1
+                derniere_erreur = e
+                continue
+            dest.envoye_le = timezone.now()
+            dest.save(update_fields=["envoye_le"])
+            envoyes += 1
+    finally:
+        connection.close()
     if envoyes and campagne.statut in ("brouillon", "prete"):
         campagne.statut = "lancee"
         campagne.lance_le = timezone.now()

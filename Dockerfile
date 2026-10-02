@@ -19,4 +19,4 @@ RUN SECRET_KEY=build-only DEBUG=false DJANGO_SETTINGS_MODULE=config.settings \
 
 # La plateforme fournit $PORT ; on l'écoute et on migre au démarrage.
 EXPOSE 8000
-CMD sh -c "python manage.py migrate --noinput && python manage.py initialiser && gunicorn config.wsgi --bind 0.0.0.0:${PORT:-8000} --workers 3 --log-file -"
+CMD sh -c "python manage.py migrate --noinput && python manage.py initialiser && gunicorn config.wsgi --bind 0.0.0.0:${PORT:-8000} --workers 3 --timeout 120 --log-file -"

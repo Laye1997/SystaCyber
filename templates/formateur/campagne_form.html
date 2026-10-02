@@ -1,12 +1,12 @@
 {% extends "base.html" %}
-{% block title %}Nouvelle campagne{% endblock %}
+{% block title %}{% if edition %}Modifier la campagne{% else %}Nouvelle campagne{% endif %}{% endblock %}
 {% block body %}
 <header class="topbar">
   {% include "includes/logo.html" with tag="CyberSécurité" %}
   <nav><a href="{% url 'campagnes_liste' %}">Campagnes</a></nav>
 </header>
 <div class="wrap" style="max-width:760px">
-  <h1 class="page-title">Nouvelle campagne de simulation</h1>
+  <h1 class="page-title">{% if edition %}Modifier la campagne{% else %}Nouvelle campagne de simulation{% endif %}</h1>
   <div class="card" style="background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.35);margin-bottom:1rem">
     <strong>Rappel</strong>
     <p class="help" style="margin:.3rem 0 0">Une campagne n'est envoyée qu'avec une autorisation écrite du client (DG / RSSI). Les résultats sont présentés par service, jamais nominativement. Aucun mot de passe saisi n'est enregistré.</p>
@@ -45,12 +45,14 @@
       </div>
     </div>
 
+    {% if dests_form %}
     <label for="{{ dests_form.liste.id_for_label }}">Destinataires <span class="help">(facultatif, modifiable ensuite)</span></label>
     {{ dests_form.liste }}
     <p class="help">Une personne par ligne : <code>email ; nom ; service</code>. Vous pourrez aussi en ajouter après la création.</p>
+    {% endif %}
 
     <div style="margin-top:1.2rem;display:flex;gap:.5rem;align-items:center">
-      <button type="submit">Créer la campagne</button>
+      <button type="submit">{% if edition %}Enregistrer{% else %}Créer la campagne{% endif %}</button>
       <a class="btn ghost" href="{% url 'campagnes_liste' %}">Annuler</a>
     </div>
   </form>
