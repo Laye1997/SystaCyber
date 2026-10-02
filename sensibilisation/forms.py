@@ -139,7 +139,7 @@ class CampagneForm(forms.ModelForm):
         from .models import EmailExercice
 
         self.fields["date_autorisation"].input_formats = ["%Y-%m-%d"]
-        self.fields["modele"].queryset = EmailExercice.objects.order_by("categorie", "objet")
+        self.fields["modele"].queryset = EmailExercice.objects.filter(bibliotheque=True).order_by("categorie", "objet")
         self.fields["modele"].label_from_instance = lambda e: (
             f"{'[' + e.categorie + '] ' if e.categorie else ''}{e.objet}"
         )

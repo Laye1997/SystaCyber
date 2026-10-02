@@ -110,7 +110,7 @@ def pack_contenu(request):
         "formateur/pack.html",
         {
             "questions": Question.objects.prefetch_related("choix"),
-            "emails": EmailExercice.objects.all(),
+            "emails": EmailExercice.objects.filter(bibliotheque=True),
             "slides": Slide.objects.select_related("module"),
         },
     )
@@ -150,7 +150,12 @@ def email_editer(request, pk=None):
     destination = request.GET.get("next") or request.POST.get("next") or ""
     form = EmailExerciceForm(request.POST or None, instance=email)
     if form.is_valid():
+        creation = email is None
         obj = form.save()
+        if creation and destination == "campagne":
+            # Email créé pour une campagne précise : pas dans la bibliothèque.
+            obj.bibliotheque = False
+            obj.save(update_fields=["bibliotheque"])
         messages.success(request, "Email d'exercice enregistré.")
         if destination == "campagne":
             return redirect(f"{reverse('campagne_creer')}?modele={obj.pk}")
@@ -656,6 +661,17 @@ def campagne_creer(request):
             if request.GET.get(champ):
                 initial[champ] = request.GET.get(champ)
     form = CampagneForm(request.POST or None, initial=initial)
+    # Un modèle créé pour cette campagne (hors bibliothèque) doit rester
+    # sélectionnable : on l'ajoute au choix s'il est présélectionné/soumis.
+    modele_id = request.POST.get("modele") or request.GET.get("modele")
+    if modele_id:
+        from django.db.models import Q
+
+        from .models import EmailExercice
+
+        form.fields["modele"].queryset = (
+            EmailExercice.objects.filter(Q(bibliotheque=True) | Q(pk=modele_id)).order_by("categorie", "objet")
+        )
     dests_form = DestinatairesForm(request.POST or None)
     dests_form.fields["liste"].required = False
     if form.is_valid() and dests_form.is_valid():

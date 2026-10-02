@@ -126,6 +126,11 @@ class EmailExercice(models.Model):
     url_affichee = models.CharField("Lien affiché au survol", max_length=250, blank=True)
     page_lecon = models.TextField("Leçon après un clic", blank=True)
     actif = models.BooleanField(default=True)
+    bibliotheque = models.BooleanField(
+        "Dans la bibliothèque",
+        default=True,
+        help_text="Affiché dans la liste des emails de simulation. Décoché pour les emails créés pour une campagne précise.",
+    )
 
     class Meta:
         ordering = ["ordre"]
