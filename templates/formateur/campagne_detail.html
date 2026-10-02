@@ -12,7 +12,13 @@
       <p class="help" style="margin:0">{{ campagne.organisation }} · modèle : {{ campagne.modele.objet }}</p>
       <h1 class="page-title">{{ campagne.nom }}</h1>
     </div>
-    <span class="tag {% if campagne.autorisee %}ok{% else %}bad{% endif %}">{{ campagne.get_statut_display }}</span>
+    <div style="display:flex;gap:.6rem;align-items:center">
+      <span class="tag {% if campagne.autorisee %}ok{% else %}bad{% endif %}">{{ campagne.get_statut_display }}</span>
+      <form method="post" action="{% url 'campagne_supprimer' campagne.pk %}" class="inline-form" onsubmit="return confirm('Supprimer définitivement cette campagne et ses données ?');">
+        {% csrf_token %}
+        <button type="submit" class="danger">Supprimer</button>
+      </form>
+    </div>
   </div>
 
   {% if not campagne.autorisee %}

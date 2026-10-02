@@ -29,6 +29,7 @@ urlpatterns = [
     path("campagnes/<int:pk>/", views.campagne_detail, name="campagne_detail"),
     path("campagnes/<int:pk>/destinataires/", views.campagne_destinataires, name="campagne_destinataires"),
     path("campagnes/<int:pk>/lancer/", views.campagne_lancer, name="campagne_lancer"),
+    path("campagnes/<int:pk>/supprimer/", views.campagne_supprimer, name="campagne_supprimer"),
     path("campagnes/<int:pk>/signaler/<int:dest_pk>/", views.campagne_signaler, name="campagne_signaler"),
     # Traçage : liens publics contenus dans les emails
     path("t/<str:jeton>/", views.campagne_clic, name="campagne_clic"),

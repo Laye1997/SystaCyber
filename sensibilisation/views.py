@@ -161,9 +161,18 @@ def email_editer(request, pk=None):
 @login_required
 @require_http_methods(["POST"])
 def email_supprimer(request, pk):
+    from django.db.models import ProtectedError
+
     email = get_object_or_404(EmailExercice, pk=pk)
-    email.delete()
-    messages.success(request, "Email d'exercice supprimé.")
+    try:
+        email.delete()
+        messages.success(request, "Email d'exercice supprimé.")
+    except ProtectedError:
+        messages.error(
+            request,
+            "Impossible de supprimer cet email : il est utilisé par une ou plusieurs campagnes. "
+            "Supprimez d'abord ces campagnes.",
+        )
     return redirect("pack_contenu")
 
 
@@ -782,6 +791,16 @@ def campagne_lecon(request, jeton):
             "signalement": campagne.organisation.adresse_signalement,
         },
     )
+
+
+@login_required
+@require_POST
+def campagne_supprimer(request, pk):
+    campagne = get_object_or_404(Campagne, pk=pk)
+    nom = campagne.nom
+    campagne.delete()
+    messages.success(request, f"Campagne « {nom} » supprimée.")
+    return redirect("campagnes_liste")
 
 
 @login_required
