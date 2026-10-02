@@ -289,8 +289,9 @@ class CampagneTests(TestCase):
         self.camp.autorise_par = "RSSI BCI"
         self.camp.date_autorisation = self.date.today()
         self.camp.save()
-        n = envoyer_campagne(self.camp)
-        self.assertEqual(n, 1)
+        res = envoyer_campagne(self.camp)
+        self.assertEqual(res["envoyes"], 1)
+        self.assertEqual(res["echecs"], 0)
         self.assertEqual(len(mail.outbox), 1)
         self.assertIn(f"/t/{self.dest.jeton}/", mail.outbox[0].alternatives[0][0])
         self.dest.refresh_from_db()

@@ -80,7 +80,7 @@ def envoyer_campagne(campagne, request=None):
     expediteur = campagne.expediteur_affiche or (
         f"{modele.expediteur_nom} <{campagne.personnaliser(modele.expediteur_adresse)}>"
     )
-    envoyes = 0
+    envoyes, echecs, derniere_erreur = 0, 0, None
     for dest in campagne.destinataires.filter(envoye_le=None):
         sujet = campagne.personnaliser(modele.objet, dest)
         html = corps_html(campagne, dest, request)
@@ -92,7 +92,12 @@ def envoyer_campagne(campagne, request=None):
             texte_brut = corps_perso + "\n\n" + lien_dest
         msg = EmailMultiAlternatives(sujet, texte_brut, expediteur, [dest.email])
         msg.attach_alternative(html, "text/html")
-        msg.send(fail_silently=False)
+        try:
+            msg.send(fail_silently=False)
+        except Exception as e:  # une adresse invalide ne doit pas bloquer les autres
+            echecs += 1
+            derniere_erreur = e
+            continue
         dest.envoye_le = timezone.now()
         dest.save(update_fields=["envoye_le"])
         envoyes += 1
@@ -100,4 +105,8 @@ def envoyer_campagne(campagne, request=None):
         campagne.statut = "lancee"
         campagne.lance_le = timezone.now()
         campagne.save(update_fields=["statut", "lance_le"])
+    # Si rien n'est parti et qu'il y a eu une erreur, on la remonte pour l'afficher.
+    if envoyes == 0 and derniere_erreur is not None:
+        raise derniere_erreur
+    return {"envoyes": envoyes, "echecs": echecs}
     return envoyes

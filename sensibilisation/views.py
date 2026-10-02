@@ -729,7 +729,7 @@ def campagne_destinataires(request, pk):
 def campagne_lancer(request, pk):
     campagne = get_object_or_404(Campagne, pk=pk)
     try:
-        n = envoyer_campagne(campagne, request)
+        res = envoyer_campagne(campagne, request)
     except CampagneNonAutorisee as e:
         messages.error(request, str(e))
         return redirect(campagne)
@@ -738,9 +738,13 @@ def campagne_lancer(request, pk):
         # on affiche le message au lieu de planter en 500.
         messages.error(request, f"Échec de l'envoi : {e}")
         return redirect(campagne)
-    messages.success(request, f"{n} email(s) envoyé(s).") if n else messages.info(
-        request, "Aucun destinataire à contacter."
-    )
+    envoyes, echecs = res["envoyes"], res["echecs"]
+    if envoyes and echecs:
+        messages.success(request, f"{envoyes} email(s) envoyé(s), {echecs} en échec (adresses invalides ?).")
+    elif envoyes:
+        messages.success(request, f"{envoyes} email(s) envoyé(s).")
+    else:
+        messages.info(request, "Aucun destinataire à contacter.")
     return redirect(campagne)
 
 
